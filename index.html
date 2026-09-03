@@ -866,35 +866,59 @@
         }
 
         // ===================== ДОБАВЛЕНИЕ =====================
-        async function addSubject() {
-            const name = document.getElementById('subjectName').value.trim();
-            const description = document.getElementById('subjectDescription').value.trim();
-            const creator = document.getElementById('subjectCreator').value.trim() || 'anonymous';
+async function addSubject() {
+    const name = document.getElementById('subjectName').value.trim();
+    const description = document.getElementById('subjectDescription').value.trim();
+    const creator = document.getElementById('subjectCreator').value.trim() || 'anonymous';
 
-            if (!name) {
-                alert('Введите название предмета');
-                return;
-            }
+    if (!name) {
+        alert('Введите название предмета');
+        return;
+    }
 
-            try {
-                const url =
-                    `${API_URL}?action=addSubject&name=${encodeURIComponent(name)}&description=${encodeURIComponent(description)}&creator=${encodeURIComponent(creator)}`;
-                const response = await fetch(url);
-                const result = await response.json();
+    try {
+        // Показываем, что идет загрузка
+        document.getElementById('subjectsContent').innerHTML = `
+            <div class="empty-state">
+                <div class="icon">⏳</div>
+                <p>Добавление предмета...</p>
+            </div>
+        `;
 
-                if (result.success) {
-                    closeModal('subject');
-                    document.getElementById('subjectName').value = '';
-                    document.getElementById('subjectDescription').value = '';
-                    document.getElementById('subjectCreator').value = '';
-                    loadData();
-                } else {
-                    alert('Ошибка: ' + result.error);
-                }
-            } catch (e) {
-                alert('Ошибка соединения: ' + e.message);
-            }
+        const url = `${API_URL}?action=addSubject&name=${encodeURIComponent(name)}&description=${encodeURIComponent(description)}&creator=${encodeURIComponent(creator)}`;
+        const response = await fetch(url);
+        const result = await response.json();
+
+        if (result.success) {
+            // Закрываем модалку
+            closeModal('subject');
+            
+            // Очищаем поля
+            document.getElementById('subjectName').value = '';
+            document.getElementById('subjectDescription').value = '';
+            document.getElementById('subjectCreator').value = '';
+            
+            // Ждем 1 секунду (чтобы Google таблица успела обновиться) и перезагружаем
+            document.getElementById('subjectsContent').innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">✅</div>
+                    <p>Предмет добавлен! Обновление данных...</p>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                loadData();
+            }, 1500);
+            
+        } else {
+            alert('Ошибка: ' + (result.error || 'Неизвестная ошибка'));
+            loadData(); // Перезагружаем, чтобы показать актуальное состояние
         }
+    } catch (e) {
+        alert('Ошибка соединения: ' + e.message);
+        loadData();
+    }
+}
 
         async function addTopic() {
             const subjectId = document.getElementById('topicSubjectId').value;
