@@ -1,1001 +1,734 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>сЛ24-07</title>
-    <style>
-        /* ===== БАЗА ===== */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
-            background: #eef3f8;
-            padding: 0;
-            min-height: 100vh;
-        }
-
-        /* ===== HEADER ===== */
-        .header {
-            background: linear-gradient(135deg, #0b2f48, #1a5a7a);
-            color: white;
-            padding: 16px 24px;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .header h1 {
-            font-size: 22px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
-
-        .header h1 span {
-            font-weight: 300;
-            font-size: 14px;
-            opacity: 0.8;
-            margin-left: 8px;
-        }
-
-        .menu-toggle {
-            font-size: 26px;
-            background: rgba(255, 255, 255, 0.12);
-            border: none;
-            color: white;
-            padding: 6px 14px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: 0.2s;
-            line-height: 1.4;
-        }
-
-        .menu-toggle:hover {
-            background: rgba(255, 255, 255, 0.25);
-        }
-
-        /* ===== SIDEBAR ===== */
-        .sidebar-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.4);
-            z-index: 998;
-            display: none;
-        }
-
-        .sidebar-overlay.active {
-            display: block;
-        }
-
-        .sidebar {
-            position: fixed;
-            top: 0;
-            right: -300px;
-            width: 280px;
-            height: 100%;
-            background: #0b2f48;
-            transition: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-            padding: 80px 20px 30px;
-            z-index: 999;
-            box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
-            overflow-y: auto;
-        }
-
-        .sidebar.open {
-            right: 0;
-        }
-
-        .sidebar a {
-            display: block;
-            color: #dce8f0;
-            text-decoration: none;
-            padding: 14px 18px;
-            border-radius: 8px;
-            margin-bottom: 4px;
-            font-size: 17px;
-            cursor: pointer;
-            transition: 0.2s;
-            border-left: 3px solid transparent;
-        }
-
-        .sidebar a:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-left-color: #5a9fc7;
-        }
-
-        .sidebar a.active {
-            background: rgba(255, 255, 255, 0.1);
-            border-left-color: #5a9fc7;
-        }
-
-        .sidebar .menu-icon {
-            margin-right: 14px;
-            font-size: 20px;
-        }
-
-        /* ===== КОНТЕЙНЕР ===== */
-        .container {
-            max-width: 860px;
-            margin: 0 auto;
-            padding: 24px 16px 80px;
-        }
-
-        .page {
-            display: none;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .page.active {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* ===== РАСПИСАНИЕ (ваш стиль, немного дополнен) ===== */
-        .day-block {
-            margin-bottom: 24px;
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid #d7e2ec;
-            background: #ffffff;
-        }
-
-        .day-title {
-            background: #d4e0ec;
-            padding: 10px 18px;
-            font-size: 16px;
-            font-weight: 700;
-            color: #0b2f48;
-            letter-spacing: 0.3px;
-            border-bottom: 2px solid #bccfdf;
-        }
-
-        .row {
-            display: grid;
-            grid-template-columns: 140px 1fr;
-            border-bottom: 1px solid #e6eef6;
-        }
-
-        .row:last-child {
-            border-bottom: none;
-        }
-
-        .row-time {
-            background: #f6faff;
-            padding: 10px 16px;
-            font-weight: 600;
-            color: #1a4b6b;
-            border-right: 1px solid #e0eaf3;
-            font-size: 14px;
-        }
-
-        .row-lesson {
-            background: #fafdff;
-            padding: 10px 16px;
-            font-size: 14px;
-            color: #142f44;
-            line-height: 1.5;
-        }
-
-        .row-lesson strong {
-            color: #003d66;
-        }
-
-        .lecture-note {
-            font-size: 13px;
-            color: #1f537a;
-            background: #ecf4fd;
-            padding: 5px 12px;
-            border-radius: 8px;
-            margin-top: 4px;
-            display: inline-block;
-            border-left: 3px solid #3a7ba3;
-            line-height: 1.6;
-        }
-
-        .lecture-note strong {
-            color: #003d66;
-        }
-
-        .meta {
-            margin-top: 6px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px 28px;
-            background: #f0f7fe;
-            padding: 14px 20px;
-            border-radius: 12px;
-            border: 1px solid #d5e2ef;
-            font-size: 14px;
-        }
-
-        .meta .label {
-            font-weight: 600;
-            color: #1a4463;
-        }
-
-        .exams {
-            color: #a52a2a;
-            font-weight: 500;
-        }
-
-        .credit {
-            color: #1f7840;
-            font-weight: 500;
-        }
-
-        @media (max-width: 600px) {
-            .container {
-                padding: 12px 8px 60px;
-            }
-            .row {
-                grid-template-columns: 100px 1fr;
-            }
-            .row-time {
-                padding: 8px 12px;
-                font-size: 13px;
-            }
-            .row-lesson {
-                padding: 8px 12px;
-                font-size: 13px;
-            }
-            .day-title {
-                font-size: 15px;
-                padding: 8px 14px;
-            }
-            .meta {
-                flex-direction: column;
-                gap: 6px;
-                padding: 12px 16px;
-                font-size: 13px;
-            }
-            .header h1 {
-                font-size: 18px;
-            }
-            .header h1 span {
-                font-size: 12px;
-                display: block;
-                margin-left: 0;
-            }
-        }
-
-        /* ===== ПРЕДМЕТЫ (ФОРУМ) ===== */
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-            border: 1px solid #d7e2ec;
-        }
-
-        .card-title {
-            font-size: 20px;
-            font-weight: 700;
-            color: #0b2f48;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 3px solid #3a7ba3;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-
-        .btn-add {
-            font-size: 14px;
-            background: #1a5a7a;
-            color: white;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: 0.2s;
-            font-weight: 600;
-        }
-
-        .btn-add:hover {
-            background: #0b2f48;
-        }
-
-        .btn-add-small {
-            font-size: 12px;
-            padding: 4px 14px;
-            margin-left: 10px;
-        }
-
-        .subject-item {
-            border: 1px solid #d7e2ec;
-            border-radius: 8px;
-            margin-bottom: 12px;
-            overflow: hidden;
-        }
-
-        .subject-header {
-            padding: 14px 18px;
-            background: #f6faff;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: 0.2s;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .subject-header:hover {
-            background: #ecf4fd;
-        }
-
-        .subject-header .title {
-            font-weight: 600;
-            font-size: 17px;
-            color: #0b2f48;
-        }
-
-        .subject-header .meta {
-            margin: 0;
-            background: transparent;
-            border: none;
-            padding: 0;
-            gap: 8px 16px;
-            font-size: 13px;
-            flex-wrap: wrap;
-        }
-
-        .subject-body {
-            padding: 0 18px;
-            max-height: 0;
-            overflow: hidden;
-            transition: 0.35s ease;
-        }
-
-        .subject-body.open {
-            padding: 18px;
-            max-height: 3000px;
-        }
-
-        .topic-item {
-            border-left: 3px solid #3a7ba3;
-            padding: 12px 16px;
-            margin-bottom: 8px;
-            background: #fafdff;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .topic-item:hover {
-            background: #f0f7fe;
-        }
-
-        .topic-item .topic-title {
-            font-weight: 500;
-            color: #0b2f48;
-        }
-
-        .topic-item .topic-content {
-            display: none;
-            margin-top: 8px;
-            padding: 12px 16px;
-            background: white;
-            border-radius: 6px;
-            color: #1a4463;
-            line-height: 1.7;
-            border: 1px solid #e6eef6;
-            font-size: 14px;
-        }
-
-        .topic-item .topic-content.open {
-            display: block;
-        }
-
-        .topic-item .topic-meta {
-            font-size: 12px;
-            color: #6a8aa0;
-            margin-top: 4px;
-        }
-
-        .subtopic {
-            margin-left: 28px;
-            border-left-color: #6a8aa0;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: #6a8aa0;
-        }
-
-        .empty-state .icon {
-            font-size: 40px;
-            margin-bottom: 8px;
-        }
-
-        /* ===== MODAL ===== */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 2000;
-            justify-content: center;
-            align-items: center;
-            animation: fadeIn 0.2s ease;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 12px;
-            padding: 32px;
-            max-width: 500px;
-            width: 92%;
-            max-height: 85vh;
-            overflow-y: auto;
-        }
-
-        .modal-content h3 {
-            margin-bottom: 20px;
-            color: #0b2f48;
-            font-size: 20px;
-        }
-
-        .modal-content label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 4px;
-            color: #1a4463;
-            font-size: 14px;
-        }
-
-        .modal-content input,
-        .modal-content textarea,
-        .modal-content select {
-            width: 100%;
-            padding: 10px 14px;
-            border: 1px solid #d7e2ec;
-            border-radius: 6px;
-            margin-bottom: 16px;
-            font-size: 15px;
-            font-family: inherit;
-            transition: 0.2s;
-            background: #fafdff;
-        }
-
-        .modal-content input:focus,
-        .modal-content textarea:focus,
-        .modal-content select:focus {
-            outline: none;
-            border-color: #3a7ba3;
-            box-shadow: 0 0 0 3px rgba(58, 123, 163, 0.15);
-        }
-
-        .modal-content textarea {
-            min-height: 90px;
-            resize: vertical;
-        }
-
-        .modal-actions {
-            display: flex;
-            gap: 12px;
-            justify-content: flex-end;
-            margin-top: 8px;
-        }
-
-        .modal-actions button {
-            padding: 10px 24px;
-            border: none;
-            border-radius: 6px;
-            font-size: 15px;
-            cursor: pointer;
-            transition: 0.2s;
-            font-weight: 600;
-        }
-
-        .modal-actions .btn-primary {
-            background: #1a5a7a;
-            color: white;
-        }
-
-        .modal-actions .btn-primary:hover {
-            background: #0b2f48;
-        }
-
-        .modal-actions .btn-secondary {
-            background: #d7e2ec;
-            color: #1a4463;
-        }
-
-        .modal-actions .btn-secondary:hover {
-            background: #bccfdf;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>сЛ24-07 учебный портал</title>
+  <style>
+    /* ----- Общие стили & сброс ----- */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    }
+    body {
+      background: #f5f9fe;
+      color: #1a2b4c;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    /* ----- Хедер ----- */
+    .header {
+      background: #1e3a6b;
+      color: white;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 12px rgba(0,20,50,0.15);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header h1 {
+      font-size: 1.4rem;
+      font-weight: 500;
+      letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header h1 small {
+      font-size: 0.8rem;
+      font-weight: 300;
+      opacity: 0.8;
+    }
+    .hamburger {
+      font-size: 2rem;
+      line-height: 1;
+      cursor: pointer;
+      background: none;
+      border: none;
+      color: white;
+      padding: 0 6px;
+      transition: 0.2s;
+    }
+    .hamburger:hover { opacity: 0.8; }
+
+    /* ----- Боковое меню (гамбургер) ----- */
+    .side-menu {
+      position: fixed;
+      top: 0;
+      left: -280px;
+      width: 280px;
+      height: 100vh;
+      background: #ffffff;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.08);
+      transition: left 0.3s ease;
+      z-index: 200;
+      padding: 70px 20px 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-right: 1px solid #dce5f0;
+    }
+    .side-menu.open {
+      left: 0;
+    }
+    .side-menu .close-btn {
+      position: absolute;
+      top: 16px;
+      right: 18px;
+      font-size: 2rem;
+      background: none;
+      border: none;
+      color: #1e3a6b;
+      cursor: pointer;
+    }
+    .side-menu .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      font-size: 1.2rem;
+      font-weight: 500;
+      color: #1a2b4c;
+      background: #f0f6ff;
+      transition: 0.15s;
+      cursor: pointer;
+      border: none;
+      width: 100%;
+      text-align: left;
+    }
+    .side-menu .menu-item:hover {
+      background: #dce8fa;
+      transform: translateX(4px);
+    }
+    .side-menu .menu-item.active {
+      background: #1e3a6b;
+      color: white;
+      box-shadow: 0 4px 10px rgba(30,58,107,0.3);
+    }
+    .side-menu .menu-item span { font-size: 1.6rem; }
+
+    /* ----- Основной контент ----- */
+    .main-content {
+      flex: 1;
+      padding: 20px 18px 40px;
+      max-width: 1100px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .page-section {
+      display: none;
+      animation: fade 0.25s ease;
+    }
+    .page-section.active {
+      display: block;
+    }
+    @keyframes fade { from { opacity: 0.3; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ----- Карточки расписания ----- */
+    .schedule-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 18px;
+      margin-top: 12px;
+    }
+    .day-card {
+      background: white;
+      border-radius: 24px;
+      padding: 18px 16px 16px;
+      box-shadow: 0 6px 18px rgba(0, 30, 60, 0.06);
+      border: 1px solid #e9eff7;
+      transition: 0.15s;
+    }
+    .day-card h3 {
+      font-size: 1.2rem;
+      color: #1e3a6b;
+      border-bottom: 2px solid #d0e0f0;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .lesson-item {
+      padding: 8px 0 8px 4px;
+      border-bottom: 1px dashed #e6edf6;
+      font-size: 0.95rem;
+      display: flex;
+      gap: 8px;
+    }
+    .lesson-item .time {
+      font-weight: 600;
+      color: #1e3a6b;
+      min-width: 60px;
+    }
+    .lesson-item .name {
+      color: #1f3a5f;
+    }
+    .lesson-item .aud {
+      font-size: 0.8rem;
+      color: #4e6f8f;
+      background: #eef4fc;
+      padding: 0 10px;
+      border-radius: 30px;
+      margin-left: auto;
+      white-space: nowrap;
+    }
+    .session-info {
+      margin-top: 14px;
+      background: #e2ecfa;
+      border-radius: 18px;
+      padding: 12px 14px;
+      font-size: 0.9rem;
+      color: #103256;
+      border-left: 4px solid #1e3a6b;
+    }
+    .session-info strong { font-weight: 600; }
+
+    /* ----- Форум (предметы) ----- */
+    .forum-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      gap: 10px;
+    }
+    .forum-header h2 {
+      font-weight: 500;
+      color: #1e3a6b;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn {
+      background: #1e3a6b;
+      color: white;
+      border: none;
+      padding: 10px 22px;
+      border-radius: 50px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 8px rgba(0,20,50,0.08);
+    }
+    .btn-outline {
+      background: transparent;
+      color: #1e3a6b;
+      border: 1.5px solid #1e3a6b;
+      box-shadow: none;
+    }
+    .btn-outline:hover {
+      background: #e7effa;
+    }
+    .btn:hover { opacity: 0.85; transform: scale(0.97); }
+    .subject-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .subject-card {
+      background: white;
+      border-radius: 24px;
+      padding: 16px 18px 14px;
+      border: 1px solid #dfe9f3;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+    }
+    .subject-card .subj-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #1a2f50;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      padding: 4px 0;
+    }
+    .subject-card .subj-meta {
+      font-size: 0.8rem;
+      color: #4b6a8a;
+      margin: 2px 0 8px 0;
+    }
+    .topic-list {
+      margin-top: 10px;
+      padding-left: 14px;
+      border-left: 2px solid #c5d9ee;
+    }
+    .topic-item {
+      padding: 10px 0 6px 6px;
+      border-bottom: 1px solid #ecf2fa;
+    }
+    .topic-item .topic-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      font-weight: 500;
+      color: #1f3e66;
+    }
+    .topic-item .topic-content {
+      font-size: 0.92rem;
+      color: #1f3755;
+      margin: 6px 0 2px;
+      background: #f5faff;
+      padding: 8px 12px;
+      border-radius: 16px;
+    }
+    .topic-item .topic-footer {
+      font-size: 0.75rem;
+      color: #5b7699;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .subtopic {
+      margin-left: 24px;
+      border-left: 2px dashed #b6cde0;
+      padding-left: 14px;
+    }
+    .add-topic-btn {
+      background: none;
+      border: none;
+      color: #1e3a6b;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 8px 4px;
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      opacity: 0.7;
+    }
+    .add-topic-btn:hover { opacity: 1; }
+
+    /* ----- Отладочный блок ----- */
+    .debug-box {
+      background: #f0f4fa;
+      border-radius: 18px;
+      padding: 12px 16px;
+      margin-top: 24px;
+      font-size: 0.75rem;
+      color: #1a3455;
+      border: 1px solid #d0deef;
+      max-height: 120px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* ----- Модальное окно ----- */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.2);
+      backdrop-filter: blur(4px);
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: white;
+      max-width: 480px;
+      width: 92%;
+      border-radius: 40px;
+      padding: 28px 24px 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+      animation: fade 0.2s ease;
+    }
+    .modal h3 {
+      font-weight: 500;
+      color: #1e3a6b;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .modal label {
+      font-weight: 500;
+      font-size: 0.9rem;
+      color: #1a3455;
+      display: block;
+      margin: 12px 0 4px;
+    }
+    .modal input, .modal textarea, .modal select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1.5px solid #d3e0ef;
+      border-radius: 30px;
+      font-size: 0.95rem;
+      background: #fafcff;
+      transition: 0.15s;
+    }
+    .modal input:focus, .modal textarea:focus {
+      outline: none;
+      border-color: #1e3a6b;
+      background: white;
+    }
+    .modal textarea { min-height: 80px; resize: vertical; }
+    .modal .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+      justify-content: flex-end;
+    }
+    .modal .actions .btn { flex: 1; justify-content: center; }
+    .modal .actions .btn-secondary {
+      background: #e1eaf5;
+      color: #1a2b4c;
+    }
+
+    /* ----- адаптив ----- */
+    @media (max-width: 600px) {
+      .header h1 { font-size: 1.1rem; }
+      .side-menu { width: 250px; left: -250px; }
+      .schedule-grid { grid-template-columns: 1fr; }
+    }
+    /* подложка для меню */
+    .menu-backdrop {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.1);
+      z-index: 150;
+    }
+    .menu-backdrop.open { display: block; }
+  </style>
 </head>
 <body>
 
-    <!-- ===== HEADER ===== -->
-    <div class="header">
-        <h1>сЛ24-07 <span>учебный портал</span></h1>
-        <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+<!-- ХЕДЕР -->
+<header class="header">
+  <button class="hamburger" id="hamburgerBtn" aria-label="Открыть меню">☰</button>
+  <h1>🏥 сЛ24-07 <small>учебный портал</small></h1>
+  <div style="width:36px;"></div>
+</header>
+
+<!-- Боковое меню -->
+<div class="menu-backdrop" id="menuBackdrop"></div>
+<nav class="side-menu" id="sideMenu">
+  <button class="close-btn" id="closeMenuBtn">✕</button>
+  <button class="menu-item active" data-page="schedule"><span>📅</span> Расписание</button>
+  <button class="menu-item" data-page="subjects"><span>📚</span> Предметы</button>
+  <!-- здесь можно добавить пункты, но оставляем как есть -->
+</nav>
+
+<!-- ОСНОВНАЯ ОБЛАСТЬ -->
+<main class="main-content" id="mainContent">
+
+  <!-- РАЗДЕЛ РАСПИСАНИЕ -->
+  <section class="page-section active" id="pageSchedule">
+    <h2 style="font-weight:400; margin-bottom:8px;">📅 Расписание занятий</h2>
+    <div class="schedule-grid" id="scheduleGrid"></div>
+  </section>
+
+  <!-- РАЗДЕЛ ПРЕДМЕТЫ (ФОРУМ) -->
+  <section class="page-section" id="pageSubjects">
+    <div class="forum-header">
+      <h2>📚 Предметы <span style="font-size:0.8rem; font-weight:300;">(форум)</span></h2>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn" id="addSubjectBtn">➕ Добавить предмет</button>
+        <button class="btn btn-outline" id="refreshForumBtn">🔄 Обновить</button>
+      </div>
     </div>
+    <div id="forumContainer" class="subject-list"><p style="color:#4b6a8a;">Загрузка предметов...</p></div>
+    <!-- Отладочный блок -->
+    <div class="debug-box" id="debugBox">📡 Отладка: ожидание данных...</div>
+  </section>
+</main>
 
-    <!-- ===== SIDEBAR OVERLAY ===== -->
-    <div class="sidebar-overlay" id="overlay" onclick="toggleMenu()"></div>
+<!-- МОДАЛЬНОЕ ОКНО -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalWindow">
+    <h3 id="modalTitle">➕ Новый предмет</h3>
+    <form id="modalForm">
+      <div id="modalFields"></div>
+      <div class="actions">
+        <button type="button" class="btn btn-secondary" id="modalCancelBtn">Отмена</button>
+        <button type="submit" class="btn" id="modalSubmitBtn">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
 
-    <!-- ===== SIDEBAR ===== -->
-    <div class="sidebar" id="sidebar">
-        <a class="active" onclick="switchPage('schedule')">
-            <span class="menu-icon">📅</span> Расписание
-        </a>
-        <a onclick="switchPage('subjects')">
-            <span class="menu-icon">📚</span> Предметы
-        </a>
-    </div>
+<script>
+  (function(){
+    "use strict";
 
-    <!-- ===== MAIN CONTENT ===== -->
-    <div class="container">
+    // ===================== КОНФИГУРАЦИЯ =====================
+    // ★★★ ЗАМЕНИТЕ ЭТУ ССЫЛКУ НА ВАШ Google Apps Script URL ★★★
+    const API_URL = 'https://script.google.com/macros/s/AKfycbwfV4WSxyz-u3sCfWbhnwfH8VbbcRJxDqAwWgCiAnr0LhQgCRJQdmGllNdfomMxAjOJ/exec'; // <-- вставьте свою ссылку
 
-        <!-- ========== PAGE: РАСПИСАНИЕ ========== -->
-        <div class="page active" id="page-schedule">
+    // ===================== СОСТОЯНИЕ =====================
+    let subjects = [];            // массив предметов
+    let topics = [];             // массив тем (включая подтемы)
+    let currentPage = 'schedule';
+    let modalResolve = null;     // для обработки формы
 
-            <!-- ПОНЕДЕЛЬНИК -->
-            <div class="day-block">
-                <div class="day-title">Понедельник</div>
-                <div class="row">
-                    <div class="row-time">10:20 – 12:00</div>
-                    <div class="row-lesson">Физическая подготовка (элективные модули)</div>
-                </div>
-                <div class="row">
-                    <div class="row-time">12:30 – 14:10</div>
-                    <div class="row-lesson">
-                        <strong>Лекция</strong> · ауд. №2 Главного корпуса
-                        <div class="lecture-note">
-                            <strong>07.09 / 05.10 / 02.11</strong> – Гигиена<br>
-                            <strong>14.09 / 12.10 / 09.11</strong> – Патофизиология<br>
-                            <strong>21.09 / 19.10 / 16.11</strong> – Стоматология<br>
-                            <strong>28.09 / 26.10 / 23.11</strong> – Пропедевтика внутренних болезней
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="row-time">15:10 – 16:50</div>
-                    <div class="row-lesson">
-                        <strong>Лекция</strong> · ауд. №2 Морфологического корпуса
-                        <div class="lecture-note">
-                            <strong>07.09 / 05.10 / 02.11</strong> – Фармакология<br>
-                            <strong>14.09 / 12.10 / 09.11</strong> – Общая хирургия<br>
-                            <strong>21.09 / 19.10 / 16.11</strong> – Топографическая анатомия и ОХ<br>
-                            <strong>28.09 / 26.10 / 23.11</strong> – Патологическая анатомия
-                        </div>
-                    </div>
-                </div>
-            </div>
+    // DOM-элементы
+    const scheduleGrid = document.getElementById('scheduleGrid');
+    const forumContainer = document.getElementById('forumContainer');
+    const debugBox = document.getElementById('debugBox');
 
-            <!-- ВТОРНИК -->
-            <div class="day-block">
-                <div class="day-title">Вторник</div>
-                <div class="row">
-                    <div class="row-time">10:20 – 12:00</div>
-                    <div class="row-lesson">Генетические технологии в медицине</div>
-                </div>
-                <div class="row">
-                    <div class="row-time">13:00 – 16:30</div>
-                    <div class="row-lesson">Фармакология</div>
-                </div>
-            </div>
+    const modalOverlay = document.getElementById('modalOverlay');
+    const modalWindow = document.getElementById('modalWindow');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalFields = document.getElementById('modalFields');
+    const modalForm = document.getElementById('modalForm');
+    const modalCancelBtn = document.getElementById('modalCancelBtn');
+    const modalSubmitBtn = document.getElementById('modalSubmitBtn');
 
-            <!-- СРЕДА -->
-            <div class="day-block">
-                <div class="day-title">Среда</div>
-                <div class="row">
-                    <div class="row-time">08:30 – 12:00</div>
-                    <div class="row-lesson">Пропедевтика внутренних болезней</div>
-                </div>
-                <div class="row">
-                    <div class="row-time">13:00 – 16:30</div>
-                    <div class="row-lesson">Патологическая анатомия</div>
-                </div>
-            </div>
+    // меню
+    const sideMenu = document.getElementById('sideMenu');
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const closeMenuBtn = document.getElementById('closeMenuBtn');
+    const menuBackdrop = document.getElementById('menuBackdrop');
+    const menuItems = document.querySelectorAll('.menu-item');
 
-            <!-- ЧЕТВЕРГ -->
-            <div class="day-block">
-                <div class="day-title">Четверг</div>
-                <div class="row">
-                    <div class="row-time">08:30 – 12:00</div>
-                    <div class="row-lesson">Общая хирургия</div>
-                </div>
-            </div>
-
-            <!-- ПЯТНИЦА -->
-            <div class="day-block">
-                <div class="day-title">Пятница</div>
-                <div class="row">
-                    <div class="row-time">08:30 – 12:00</div>
-                    <div class="row-lesson">Патофизиология</div>
-                </div>
-                <div class="row">
-                    <div class="row-time">13:00 – 16:30</div>
-                    <div class="row-lesson">Топографическая анатомия и оперативная хирургия</div>
-                </div>
-            </div>
-
-            <!-- СУББОТА -->
-            <div class="day-block">
-                <div class="day-title">Суббота</div>
-                <div class="row">
-                    <div class="row-time">08:30 – 12:00</div>
-                    <div class="row-lesson">Гигиена</div>
-                </div>
-                <div class="row">
-                    <div class="row-time">13:00 – 14:40</div>
-                    <div class="row-lesson">Стоматология</div>
-                </div>
-            </div>
-
-            <!-- МЕТА -->
-            <div class="meta">
-                <div><span class="label">Зачет:</span> <span class="credit">Стоматология</span></div>
-                <div><span class="label">Экзамены:</span> <span class="exams">Гигиена · Общая хирургия · Патофизиология · Топографическая анатомия и ОХ</span></div>
-                <div><span class="label">Сессия:</span> 09.01 – 23.01.2027</div>
-                <div><span class="label">Каникулы:</span> 25.01 – 31.01.2027</div>
-            </div>
-
-        </div>
-
-        <!-- ========== PAGE: ПРЕДМЕТЫ (ФОРУМ) ========== -->
-        <div class="page" id="page-subjects">
-            <div class="card">
-                <div class="card-title">
-                    📚 Предметы
-                    <button class="btn-add" onclick="openModal('subject')">+ Добавить предмет</button>
-                </div>
-                <div id="subjectsContent">
-                    <div class="empty-state">
-                        <div class="icon">📚</div>
-                        <p>Загрузка предметов...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- ===== MODAL: ДОБАВИТЬ ПРЕДМЕТ ===== -->
-    <div class="modal" id="modal-subject">
-        <div class="modal-content">
-            <h3>➕ Добавить предмет</h3>
-            <label>Название предмета *</label>
-            <input type="text" id="subjectName" placeholder="Например: Патологическая анатомия">
-
-            <label>Описание</label>
-            <textarea id="subjectDescription" placeholder="Краткое описание предмета..."></textarea>
-
-            <label>Ваш email (для истории)</label>
-            <input type="email" id="subjectCreator" placeholder="example@mail.ru">
-
-            <div class="modal-actions">
-                <button class="btn-secondary" onclick="closeModal('subject')">Отмена</button>
-                <button class="btn-primary" onclick="addSubject()">Создать</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ===== MODAL: ДОБАВИТЬ ТЕМУ ===== -->
-    <div class="modal" id="modal-topic">
-        <div class="modal-content">
-            <h3>➕ Добавить тему</h3>
-            <label>Выберите предмет *</label>
-            <select id="topicSubjectId"></select>
-
-            <label>Название темы *</label>
-            <input type="text" id="topicName" placeholder="Например: ТемПлан">
-
-            <label>Содержание (текст, ссылки, материалы)</label>
-            <textarea id="topicContent" placeholder="Подробное содержание темы..."></textarea>
-
-            <label>Родительская тема (если это подтема)</label>
-            <select id="topicParentId">
-                <option value="">— Нет (основная тема) —</option>
-            </select>
-
-            <label>Ваш email</label>
-            <input type="email" id="topicCreator" placeholder="example@mail.ru">
-
-            <div class="modal-actions">
-                <button class="btn-secondary" onclick="closeModal('topic')">Отмена</button>
-                <button class="btn-primary" onclick="addTopic()">Создать</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // ⚠️ СЮДА ВСТАВЬТЕ ССЫЛКУ НА ВАШ APPS SCRIPT
-        const API_URL = 'https://script.google.com/macros/s/AKfycbwpg7C5fOXXw--htTdlnG2_cARXLcJlqGGunkoxOqzEAVb6GOg8-nhdpZQNo-fYuK6_/exec';
-
-        let allData = {};
-
-        // ===================== ЗАГРУЗКА =====================
-        async function loadData() {
-            try {
-                const response = await fetch(API_URL);
-                allData = await response.json();
-                renderSubjects();
-            } catch (e) {
-                document.getElementById('subjectsContent').innerHTML = `
-                    <div class="empty-state">
-                        <div class="icon">⚠️</div>
-                        <p>Ошибка загрузки. Проверьте интернет и ссылку API.</p>
-                    </div>
-                `;
-                console.error(e);
-            }
-        }
-
-        // ===================== ПРЕДМЕТЫ =====================
-        function renderSubjects() {
-            const subjects = allData.subjects || [];
-            const topics = allData.topics || [];
-
-            if (!subjects.length) {
-                document.getElementById('subjectsContent').innerHTML = `
-                    <div class="empty-state">
-                        <div class="icon">📚</div>
-                        <p>Пока нет предметов. Добавьте первый!</p>
-                    </div>
-                `;
-                return;
-            }
-
-            let html = '';
-            subjects.forEach(subj => {
-                const subjectTopics = topics.filter(t => t.Предмет_ID == subj.ID);
-                const mainTopics = subjectTopics.filter(t => !t.Родительская_тема);
-
-                html += `
-                    <div class="subject-item">
-                        <div class="subject-header" onclick="toggleSubject(this)">
-                            <span class="title">${subj.Название}</span>
-                            <span class="meta">
-                                <span>📌 ${subjectTopics.length} тем</span>
-                                <span>👤 ${subj.Создатель || 'anon'}</span>
-                                <button class="btn-add btn-add-small" 
-                                        onclick="event.stopPropagation();openTopicModal('${subj.ID}')">
-                                    + Тема
-                                </button>
-                            </span>
-                        </div>
-                        <div class="subject-body">
-                            ${subj.Описание ? `<p style="color:#1a4463;margin-bottom:12px;">${subj.Описание}</p>` : ''}
-                            ${mainTopics.length ? mainTopics.map(t => renderTopic(t, topics)).join('') :
-                              '<p style="color:#6a8aa0;font-size:14px;">Нет тем. Добавьте первую!</p>'}
-                        </div>
-                    </div>
-                `;
-            });
-
-            document.getElementById('subjectsContent').innerHTML = html;
-        }
-
-        function renderTopic(topic, allTopics, level = 0) {
-            const subtopics = allTopics.filter(t => t.Родительская_тема == topic.ID);
-            const indent = level * 24;
-
-            return `
-                <div class="topic-item ${level > 0 ? 'subtopic' : ''}" style="margin-left:${indent}px;" onclick="toggleTopic(this)">
-                    <div class="topic-title">📌 ${topic.Название}</div>
-                    <div class="topic-meta">👤 ${topic.Создатель || 'anon'} · ${topic.Дата_создания || ''}</div>
-                    <div class="topic-content">${topic.Содержание || 'Нет содержимого'}</div>
-                    ${subtopics.length ? subtopics.map(st => renderTopic(st, allTopics, level + 1)).join('') : ''}
-                </div>
-            `;
-        }
-
-        function toggleSubject(el) {
-            const body = el.nextElementSibling;
-            body.classList.toggle('open');
-        }
-
-        function toggleTopic(el) {
-            const content = el.querySelector('.topic-content');
-            content.classList.toggle('open');
-        }
-
-        // ===================== МОДАЛЬНЫЕ ОКНА =====================
-        function openModal(type) {
-            document.getElementById(`modal-${type}`).classList.add('active');
-            if (type === 'topic') populateTopicSelects();
-        }
-
-        function closeModal(type) {
-            document.getElementById(`modal-${type}`).classList.remove('active');
-        }
-
-        function openTopicModal(subjectId) {
-            document.getElementById('topicSubjectId').value = subjectId;
-            openModal('topic');
-        }
-
-        function populateTopicSelects() {
-            const subjects = allData.subjects || [];
-            const topics = allData.topics || [];
-
-            const subjectSelect = document.getElementById('topicSubjectId');
-            subjectSelect.innerHTML = subjects.map(s =>
-                `<option value="${s.ID}">${s.Название}</option>`
-            ).join('');
-
-            const parentSelect = document.getElementById('topicParentId');
-            const currentSubjectId = subjectSelect.value;
-            const subjectTopics = topics.filter(t => t.Предмет_ID == currentSubjectId);
-            parentSelect.innerHTML = `<option value="">— Нет (основная тема) —</option>` +
-                subjectTopics.map(t => `<option value="${t.ID}">${t.Название}</option>`).join('');
-
-            subjectSelect.onchange = function() {
-                const st = topics.filter(t => t.Предмет_ID == this.value);
-                parentSelect.innerHTML = `<option value="">— Нет (основная тема) —</option>` +
-                    st.map(t => `<option value="${t.ID}">${t.Название}</option>`).join('');
-            };
-        }
-
-        // ===================== ДОБАВЛЕНИЕ =====================
-async function addSubject() {
-    const name = document.getElementById('subjectName').value.trim();
-    const description = document.getElementById('subjectDescription').value.trim();
-    const creator = document.getElementById('subjectCreator').value.trim() || 'anonymous';
-
-    if (!name) {
-        alert('Введите название предмета');
-        return;
+    // ===================== РАСПИСАНИЕ (статика) =====================
+    function renderSchedule() {
+      const days = [
+        { name: 'Понедельник', lessons: [['08:30', 'Анатомия (лекция)', 'ауд. 203'], ['10:15', 'Гистология', 'ауд. 115']] },
+        { name: 'Вторник', lessons: [['09:00', 'Физиология', 'ауд. 302'], ['11:00', 'Латынь', 'ауд. 401']] },
+        { name: 'Среда', lessons: [['08:30', 'Биохимия (лекция)', 'ауд. 101'], ['10:15', 'Микробиология', 'ауд. 210']] },
+        { name: 'Четверг', lessons: [['09:00', 'Патофизиология', 'ауд. 506'], ['11:00', 'Фармакология', 'ауд. 312']] },
+        { name: 'Пятница', lessons: [['08:30', 'Общая хирургия (лекция)', 'ауд. 601'], ['10:15', 'Топ. анатомия', 'ауд. 403']] },
+        { name: 'Суббота', lessons: [['09:00', 'Педиатрия', 'ауд. 207'], ['10:45', 'Психология', 'ауд. 109']] }
+      ];
+      scheduleGrid.innerHTML = days.map(d => {
+        const items = d.lessons.map(l => `<div class="lesson-item"><span class="time">${l[0]}</span><span class="name">${l[1]}</span><span class="aud">${l[2]}</span></div>`).join('');
+        return `<div class="day-card"><h3>📌 ${d.name}</h3>${items}
+          <div class="session-info"><strong>📋 Зачеты / экзамены:</strong> 10.06 – 20.06<br>📅 Сессия: 21.06 – 05.07<br>🌴 Каникулы: с 06.07</div></div>`;
+      }).join('');
     }
 
-    try {
-        // Показываем, что идет загрузка
-        document.getElementById('subjectsContent').innerHTML = `
-            <div class="empty-state">
-                <div class="icon">⏳</div>
-                <p>Добавление предмета...</p>
-            </div>
-        `;
+    // ===================== РАБОТА С API =====================
+    function apiFetch(action, payload = {}) {
+      const url = `${API_URL}?action=${action}&_=${Date.now()}`;
+      return fetch(url, {
+        method: 'POST',
+        mode: 'no-cors', // важно для Google Apps Script
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(res => res.text()).then(text => {
+        try { return JSON.parse(text); } catch(e) { return { error: 'Ошибка парсинга', raw: text }; }
+      });
+    }
 
-        const url = `${API_URL}?action=addSubject&name=${encodeURIComponent(name)}&description=${encodeURIComponent(description)}&creator=${encodeURIComponent(creator)}`;
-        const response = await fetch(url);
-        const result = await response.json();
-
-        if (result.success) {
-            // Закрываем модалку
-            closeModal('subject');
-            
-            // Очищаем поля
-            document.getElementById('subjectName').value = '';
-            document.getElementById('subjectDescription').value = '';
-            document.getElementById('subjectCreator').value = '';
-            
-            // Ждем 1 секунду (чтобы Google таблица успела обновиться) и перезагружаем
-            document.getElementById('subjectsContent').innerHTML = `
-                <div class="empty-state">
-                    <div class="icon">✅</div>
-                    <p>Предмет добавлен! Обновление данных...</p>
-                </div>
-            `;
-            
-            setTimeout(() => {
-                loadData();
-            }, 1500);
-            
+    // Загрузка данных с сервера
+    async function loadForumData() {
+      debugBox.textContent = '⏳ Загрузка данных...';
+      try {
+        const response = await apiFetch('getData');
+        debugBox.textContent = `📡 Ответ сервера: ${JSON.stringify(response, null, 2)}`;
+        if (response && response.status === 'success') {
+          subjects = response.subjects || [];
+          topics = response.topics || [];
+          renderForum();
         } else {
-            alert('Ошибка: ' + (result.error || 'Неизвестная ошибка'));
-            loadData(); // Перезагружаем, чтобы показать актуальное состояние
+          forumContainer.innerHTML = `<p style="color:#b33;">⚠️ Ошибка загрузки: ${response?.error || 'неизвестная'}</p>`;
         }
-    } catch (e) {
-        alert('Ошибка соединения: ' + e.message);
-        loadData();
+      } catch (e) {
+        debugBox.textContent = `❌ Ошибка запроса: ${e.message}`;
+        forumContainer.innerHTML = `<p style="color:#b33;">⚠️ Не удалось загрузить данные. Проверьте API_URL.</p>`;
+      }
     }
-}
 
-        async function addTopic() {
-            const subjectId = document.getElementById('topicSubjectId').value;
-            const name = document.getElementById('topicName').value.trim();
-            const content = document.getElementById('topicContent').value.trim();
-            const parentId = document.getElementById('topicParentId').value;
-            const creator = document.getElementById('topicCreator').value.trim() || 'anonymous';
-
-            if (!subjectId || !name) {
-                alert('Заполните обязательные поля (предмет и название)');
-                return;
-            }
-
-            try {
-                const url =
-                    `${API_URL}?action=addTopic&subjectId=${subjectId}&name=${encodeURIComponent(name)}&content=${encodeURIComponent(content)}&parentId=${parentId}&creator=${encodeURIComponent(creator)}`;
-                const response = await fetch(url);
-                const result = await response.json();
-
-                if (result.success) {
-                    closeModal('topic');
-                    document.getElementById('topicName').value = '';
-                    document.getElementById('topicContent').value = '';
-                    document.getElementById('topicCreator').value = '';
-                    loadData();
-                } else {
-                    alert('Ошибка: ' + result.error);
-                }
-            } catch (e) {
-                alert('Ошибка соединения: ' + e.message);
-            }
-        }
-
-        // ===================== НАВИГАЦИЯ =====================
-        function switchPage(page) {
-            document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
-            document.getElementById(`page-${page}`).classList.add('active');
-
-            document.querySelectorAll('.sidebar a').forEach(el => el.classList.remove('active'));
-            // Находим кликнутый элемент
-            const links = document.querySelectorAll('.sidebar a');
-            links.forEach(el => {
-                if (el.textContent.includes(page === 'schedule' ? 'Расписание' : 'Предметы')) {
-                    el.classList.add('active');
-                }
-            });
-
-            closeMenu();
-
-            // Если переключились на предметы — подгружаем данные
-            if (page === 'subjects') {
-                loadData();
-            }
-        }
-
-        function toggleMenu() {
-            document.getElementById('sidebar').classList.toggle('open');
-            document.getElementById('overlay').classList.toggle('active');
-        }
-
-        function closeMenu() {
-            document.getElementById('sidebar').classList.remove('open');
-            document.getElementById('overlay').classList.remove('active');
-        }
-
-        // Закрываем меню при клике вне
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('.sidebar') && !e.target.closest('.menu-toggle')) {
-                closeMenu();
-            }
+    // ===================== ОТОБРАЖЕНИЕ ФОРУМА =====================
+    function renderForum() {
+      if (!subjects.length) {
+        forumContainer.innerHTML = `<p style="color:#4b6a8a;">📭 Предметов пока нет. Добавьте первый!</p>`;
+        return;
+      }
+      let html = '';
+      subjects.forEach(subj => {
+        const subjTopics = topics.filter(t => t.parent_id === null && t.subject_id === subj.id);
+        let topicHtml = subjTopics.map(t => renderTopicTree(t, subj.id)).join('');
+        html += `<div class="subject-card">
+          <div class="subj-title">📘 ${subj.name} <span style="font-size:0.7rem; font-weight:400; color:#4b6a8a;">${subj.creator || ''}</span></div>
+          <div class="subj-meta">${subj.description || ''} · ${subj.date || ''}</div>
+          <div class="topic-list">${topicHtml}</div>
+          <button class="add-topic-btn" data-subject="${subj.id}" data-parent="null">➕ Добавить тему</button>
+        </div>`;
+      });
+      forumContainer.innerHTML = html;
+      // вешаем обработчики на кнопки "Добавить тему"
+      document.querySelectorAll('.add-topic-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+          const subjectId = this.dataset.subject;
+          const parentId = this.dataset.parent === 'null' ? null : this.dataset.parent;
+          openTopicModal(subjectId, parentId);
         });
+      });
+      // обработчики на кнопки добавления подтемы (внутри тем)
+      document.querySelectorAll('.add-subtopic-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const subjectId = this.dataset.subject;
+          const parentId = this.dataset.parent;
+          openTopicModal(subjectId, parentId);
+        });
+      });
+    }
 
-        // ===================== ЗАПУСК =====================
-        // Расписание уже есть в HTML, подгружаем предметы при первом открытии
-        // Предзагрузка при старте
-        loadData();
-    </script>
+    // Рекурсивный рендер темы/подтемы
+    function renderTopicTree(topic, subjectId) {
+      const children = topics.filter(t => t.parent_id === topic.id && t.subject_id === subjectId);
+      const childHtml = children.map(ch => renderTopicTree(ch, subjectId)).join('');
+      return `<div class="topic-item">
+        <div class="topic-header"><span>📌 ${topic.name}</span> <span style="font-weight:400; font-size:0.8rem;">${topic.creator || ''}</span></div>
+        <div class="topic-content">${topic.content || ''}</div>
+        <div class="topic-footer">${topic.date || ''} · <button class="add-subtopic-btn" style="background:none;border:none;color:#1e3a6b;cursor:pointer;font-weight:500;" data-subject="${subjectId}" data-parent="${topic.id}">➕ подтема</button></div>
+        ${childHtml ? `<div class="subtopic">${childHtml}</div>` : ''}
+      </div>`;
+    }
 
+    // ===================== МОДАЛЬНЫЕ ОКНА =====================
+    function openModal(title, fields, onSubmit) {
+      return new Promise((resolve) => {
+        modalTitle.textContent = title;
+        modalFields.innerHTML = fields.map(f => `
+          <label>${f.label}</label>
+          ${f.type === 'textarea' ? `<textarea name="${f.name}" placeholder="${f.placeholder || ''}">${f.value || ''}</textarea>` :
+          `<input type="${f.type || 'text'}" name="${f.name}" placeholder="${f.placeholder || ''}" value="${f.value || ''}">`}
+        `).join('');
+        modalOverlay.classList.add('open');
+        modalResolve = resolve;
+        modalSubmitBtn.onclick = (e) => {
+          e.preventDefault();
+          const formData = new FormData(modalForm);
+          const data = {};
+          for (let [key, val] of formData.entries()) data[key] = val;
+          modalOverlay.classList.remove('open');
+          if (modalResolve) { modalResolve(data); modalResolve = null; }
+        };
+        modalCancelBtn.onclick = () => {
+          modalOverlay.classList.remove('open');
+          if (modalResolve) { modalResolve(null); modalResolve = null; }
+        };
+        // закрытие по клику на фон
+        modalOverlay.onclick = (e) => {
+          if (e.target === modalOverlay) {
+            modalOverlay.classList.remove('open');
+            if (modalResolve) { modalResolve(null); modalResolve = null; }
+          }
+        };
+      });
+    }
+
+    // Модалка для добавления предмета
+    async function openSubjectModal() {
+      const data = await openModal('➕ Новый предмет', [
+        { label: 'Название предмета', name: 'name', placeholder: 'Введите название' },
+        { label: 'Описание', name: 'description', placeholder: 'Краткое описание', type: 'textarea' },
+        { label: 'Создатель', name: 'creator', placeholder: 'Ваше имя' }
+      ]);
+      if (!data) return;
+      const payload = { action: 'addSubject', subject: { name: data.name, description: data.description, creator: data.creator } };
+      debugBox.textContent = '⏳ Отправка предмета...';
+      try {
+        const res = await apiFetch('addSubject', payload);
+        debugBox.textContent = `📡 Ответ: ${JSON.stringify(res)}`;
+        if (res.status === 'success') {
+          // ждём 1.5 сек и обновляем
+          setTimeout(() => loadForumData(), 1500);
+        } else {
+          alert('Ошибка добавления предмета: ' + (res.error || ''));
+        }
+      } catch(e) {
+        debugBox.textContent = `❌ Ошибка: ${e.message}`;
+        alert('Ошибка соединения');
+      }
+    }
+
+    // Модалка для добавления темы/подтемы
+    async function openTopicModal(subjectId, parentId = null) {
+      const data = await openModal('📝 Добавить тему', [
+        { label: 'Название темы', name: 'name', placeholder: 'Введите название' },
+        { label: 'Содержание', name: 'content', placeholder: 'Текст или описание', type: 'textarea' },
+        { label: 'Автор', name: 'creator', placeholder: 'Ваше имя' }
+      ]);
+      if (!data) return;
+      const payload = { action: 'addTopic', topic: { subject_id: subjectId, parent_id: parentId, name: data.name, content: data.content, creator: data.creator } };
+      debugBox.textContent = '⏳ Отправка темы...';
+      try {
+        const res = await apiFetch('addTopic', payload);
+        debugBox.textContent = `📡 Ответ: ${JSON.stringify(res)}`;
+        if (res.status === 'success') {
+          setTimeout(() => loadForumData(), 1500);
+        } else {
+          alert('Ошибка добавления темы: ' + (res.error || ''));
+        }
+      } catch(e) {
+        debugBox.textContent = `❌ Ошибка: ${e.message}`;
+        alert('Ошибка соединения');
+      }
+    }
+
+    // ===================== НАВИГАЦИЯ =====================
+    function navigateTo(page) {
+      currentPage = page;
+      document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+      document.getElementById(page === 'schedule' ? 'pageSchedule' : 'pageSubjects').classList.add('active');
+      menuItems.forEach(item => {
+        item.classList.toggle('active', item.dataset.page === page);
+      });
+      if (page === 'subjects') loadForumData();
+      closeMenu();
+    }
+
+    function toggleMenu(open) {
+      sideMenu.classList.toggle('open', open);
+      menuBackdrop.classList.toggle('open', open);
+    }
+    function closeMenu() { toggleMenu(false); }
+
+    // ===================== ИНИЦИАЛИЗАЦИЯ =====================
+    function init() {
+      renderSchedule();
+
+      // события меню
+      hamburgerBtn.addEventListener('click', () => toggleMenu(true));
+      closeMenuBtn.addEventListener('click', closeMenu);
+      menuBackdrop.addEventListener('click', closeMenu);
+      menuItems.forEach(item => {
+        item.addEventListener('click', () => navigateTo(item.dataset.page));
+      });
+
+      // Кнопки
+      document.getElementById('addSubjectBtn').addEventListener('click', openSubjectModal);
+      document.getElementById('refreshForumBtn').addEventListener('click', loadForumData);
+
+      // Загружаем предметы при старте
+      loadForumData();
+    }
+
+    // обработка кликов на кнопки "Добавить тему" делегированием (уже есть)
+    document.addEventListener('click', function(e) {
+      // для кнопок .add-topic-btn и .add-subtopic-btn обработчики повешены в renderForum
+    });
+
+    init();
+  })();
+</script>
+
+<!-- Инструкция по настройке Google Таблицы (закомментирована) -->
+<!--
+  ДЛЯ НАСТРОЙКИ GOOGLE APPS SCRIPT:
+  1. Создайте таблицу с листами "Предметы" и "Темы_предметов"
+  2. Заголовки "Предметы": ID, Название, Описание, Создатель, Дата_создания
+  3. Заголовки "Темы_предметов": ID, Предмет_ID, Название, Содержание, Создатель, Дата_создания, Родительская_тема
+  4. В редакторе скриптов разверните код (см. пример в описании)
+  5. Опубликуйте как веб-приложение (доступ "Все, даже анонимные") и скопируйте URL в переменную API_URL
+-->
 </body>
 </html>
