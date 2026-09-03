@@ -5,11 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
   <title>сЛ24-07 учебный портал</title>
   
-  <!-- Мета-теги для правильной работы с подссылками -->
   <base href="/volgmu24-07/">
   
   <style>
-    /* ----- Общие стили & сброс ----- */
     * {
       margin: 0;
       padding: 0;
@@ -23,7 +21,6 @@
       flex-direction: column;
       min-height: 100vh;
     }
-    /* ----- Хедер ----- */
     .header {
       background: #1e3a6b;
       color: white;
@@ -61,7 +58,6 @@
     }
     .hamburger:hover { opacity: 0.8; }
 
-    /* ----- Боковое меню (гамбургер) ----- */
     .side-menu {
       position: fixed;
       top: 0;
@@ -119,7 +115,6 @@
     }
     .side-menu .menu-item span { font-size: 1.6rem; }
 
-    /* ----- Основной контент ----- */
     .main-content {
       flex: 1;
       padding: 20px 18px 40px;
@@ -136,7 +131,6 @@
     }
     @keyframes fade { from { opacity: 0.3; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* ----- Карточки расписания ----- */
     .schedule-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -197,7 +191,6 @@
     }
     .session-info strong { font-weight: 600; }
 
-    /* ----- Форум (предметы) ----- */
     .forum-header {
       display: flex;
       flex-wrap: wrap;
@@ -316,7 +309,6 @@
     }
     .add-topic-btn:hover { opacity: 1; }
 
-    /* ----- Отладочный блок ----- */
     .debug-box {
       background: #f0f4fa;
       border-radius: 18px;
@@ -331,7 +323,6 @@
       word-break: break-all;
     }
 
-    /* ----- Модальное окно ----- */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -394,13 +385,11 @@
       color: #1a2b4c;
     }
 
-    /* ----- адаптив ----- */
     @media (max-width: 600px) {
       .header h1 { font-size: 1.1rem; }
       .side-menu { width: 250px; left: -250px; }
       .schedule-grid { grid-template-columns: 1fr; }
     }
-    /* подложка для меню */
     .menu-backdrop {
       display: none;
       position: fixed;
@@ -410,7 +399,6 @@
     }
     .menu-backdrop.open { display: block; }
 
-    /* Индикатор загрузки */
     .loading {
       text-align: center;
       padding: 40px;
@@ -431,14 +419,12 @@
 </head>
 <body>
 
-<!-- ХЕДЕР -->
 <header class="header">
   <button class="hamburger" id="hamburgerBtn" aria-label="Открыть меню">☰</button>
   <h1>🏥 сЛ24-07 <small>учебный портал</small></h1>
   <div style="width:36px;"></div>
 </header>
 
-<!-- Боковое меню -->
 <div class="menu-backdrop" id="menuBackdrop"></div>
 <nav class="side-menu" id="sideMenu">
   <button class="close-btn" id="closeMenuBtn">✕</button>
@@ -446,10 +432,8 @@
   <a href="predmety" class="menu-item" data-page="subjects"><span>📚</span> Предметы</a>
 </nav>
 
-<!-- ОСНОВНАЯ ОБЛАСТЬ -->
 <main class="main-content" id="mainContent">
 
-  <!-- РАЗДЕЛ РАСПИСАНИЕ -->
   <section class="page-section active" id="pageSchedule">
     <h2 style="font-weight:400; margin-bottom:8px;">📅 Расписание занятий</h2>
     <div id="scheduleContainer">
@@ -457,7 +441,6 @@
     </div>
   </section>
 
-  <!-- РАЗДЕЛ ПРЕДМЕТЫ (ФОРУМ) -->
   <section class="page-section" id="pageSubjects">
     <div class="forum-header">
       <h2>📚 Предметы <span style="font-size:0.8rem; font-weight:300;">(форум)</span></h2>
@@ -467,12 +450,10 @@
       </div>
     </div>
     <div id="forumContainer" class="subject-list"><p style="color:#4b6a8a;">Загрузка предметов...</p></div>
-    <!-- Отладочный блок -->
     <div class="debug-box" id="debugBox">📡 Отладка: ожидание данных...</div>
   </section>
 </main>
 
-<!-- МОДАЛЬНОЕ ОКНО -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal" id="modalWindow">
     <h3 id="modalTitle">➕ Новый предмет</h3>
@@ -490,77 +471,247 @@
   (function(){
     "use strict";
 
-    // ===================== КОНФИГУРАЦИЯ =====================
-    // ★★★ Ссылка на JSON с расписанием в репозитории ★★★
+    // ★★★ ЗАМЕНИТЕ НА ВАШ URL ★★★
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxfPWN8pRfd5h_R4hAZ1CYa05uIt870BKhquKCNiEOtvPE_M43I3Ruleq8g5VGNcEhQ/exec';
     const SCHEDULE_JSON_URL = 'https://raw.githubusercontent.com/microbiwe/volgmu24-07/main/schedule.json';
-    
-    // ★★★ Ссылка на Google Apps Script ★★★
-    const API_URL = 'https://script.google.com/macros/s/AKfycbx2fBTgFobkk3jIUS35oZ1AORQDEYsigIRrjy-0hA_OIjI8mmh2tEudaICplPh1S6rI/exec';
 
-    // ===================== РОУТИНГ (подссылки) =====================
-    function getCurrentPage() {
-      const path = window.location.pathname;
-      if (path.includes('/raspisanie') || path.endsWith('/raspisanie')) {
-        return 'schedule';
-      } else if (path.includes('/predmety') || path.endsWith('/predmety')) {
-        return 'subjects';
-      }
-      // По умолчанию - расписание
-      return 'schedule';
-    }
+    let subjects = [];
+    let topics = [];
 
-    function navigateTo(page) {
-      // Обновляем URL без перезагрузки страницы
-      let newPath = '';
-      if (page === 'schedule') {
-        newPath = '/volgmu24-07/raspisanie';
-      } else {
-        newPath = '/volgmu24-07/predmety';
-      }
-      
-      // Используем history.pushState для изменения URL
-      if (window.location.pathname !== newPath) {
-        window.history.pushState({ page: page }, '', newPath);
-      }
-      
-      // Обновляем активную страницу
-      showPage(page);
-      updateActiveMenu(page);
-    }
-
-    function showPage(page) {
-      // Скрываем все страницы
-      document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
-      
-      // Показываем нужную
-      const pageId = page === 'schedule' ? 'pageSchedule' : 'pageSubjects';
-      document.getElementById(pageId).classList.add('active');
-      
-      // Загружаем данные если нужно
-      if (page === 'schedule') {
-        loadSchedule();
-      } else if (page === 'subjects') {
-        loadForumData();
-      }
-      
-      // Закрываем меню
-      closeMenu();
-    }
-
-    function updateActiveMenu(page) {
-      document.querySelectorAll('.menu-item').forEach(item => {
-        item.classList.toggle('active', item.dataset.page === page);
+    // ===================== JSONP ЗАГРУЗКА ДАННЫХ =====================
+    function loadDataViaJsonp() {
+      return new Promise((resolve, reject) => {
+        const callbackName = 'jsonpCallback_' + Date.now();
+        const script = document.createElement('script');
+        const url = `${API_URL}?action=getData&callback=${callbackName}&_=${Date.now()}`;
+        
+        window[callbackName] = function(data) {
+          delete window[callbackName];
+          document.body.removeChild(script);
+          resolve(data);
+        };
+        
+        script.src = url;
+        script.onerror = function() {
+          delete window[callbackName];
+          document.body.removeChild(script);
+          reject(new Error('JSONP запрос не удался'));
+        };
+        
+        // Таймаут на случай, если скрипт завис
+        const timeout = setTimeout(() => {
+          delete window[callbackName];
+          document.body.removeChild(script);
+          reject(new Error('Таймаут JSONP запроса'));
+        }, 10000);
+        
+        // Отменяем таймаут при успехе
+        const originalCallback = window[callbackName];
+        window[callbackName] = function(data) {
+          clearTimeout(timeout);
+          originalCallback(data);
+        };
+        
+        document.body.appendChild(script);
       });
     }
 
-    // Обработка навигации (вперед/назад)
-    window.addEventListener('popstate', function(event) {
-      const page = event.state?.page || getCurrentPage();
-      showPage(page);
-      updateActiveMenu(page);
-    });
+    // ===================== ЗАГРУЗКА ФОРУМА =====================
+    async function loadForumData() {
+      const container = document.getElementById('forumContainer');
+      const debugBox = document.getElementById('debugBox');
+      
+      debugBox.textContent = '⏳ Загрузка данных через JSONP...';
+      container.innerHTML = '<p style="color:#4b6a8a;">Загрузка...</p>';
+      
+      try {
+        const data = await loadDataViaJsonp();
+        debugBox.textContent = `📡 Ответ сервера: ${JSON.stringify(data, null, 2)}`;
+        
+        if (data.status === 'success') {
+          subjects = data.subjects || [];
+          topics = data.topics || [];
+          renderForum();
+        } else {
+          container.innerHTML = `<p style="color:#b33;">⚠️ Ошибка: ${data.message || 'Неизвестная ошибка'}</p>`;
+        }
+      } catch (error) {
+        debugBox.textContent = `❌ Ошибка JSONP: ${error.message}`;
+        container.innerHTML = `<p style="color:#b33;">⚠️ Не удалось загрузить данные через JSONP.</p>
+          <p style="color:#666;font-size:0.9rem;">Проверьте API_URL и убедитесь, что веб-приложение развернуто с доступом "Все, даже анонимные"</p>
+          <p style="color:#666;font-size:0.9rem;">API_URL: ${API_URL}</p>`;
+      }
+    }
 
-    // ===================== ЗАГРУЗКА РАСПИСАНИЯ ИЗ JSON =====================
+    // ===================== ОТПРАВКА ДАННЫХ (POST) =====================
+    async function sendData(action, payload) {
+      try {
+        const formData = new FormData();
+        formData.append('action', action);
+        formData.append('payload', JSON.stringify(payload));
+        
+        const url = `${API_URL}?_=${Date.now()}`;
+        const response = await fetch(url, {
+          method: 'POST',
+          mode: 'no-cors',
+          body: formData
+        });
+        
+        // При no-cors мы не можем прочитать ответ, но запрос отправлен
+        return { status: 'success', message: 'Данные отправлены' };
+      } catch (error) {
+        throw new Error(`Ошибка отправки: ${error.message}`);
+      }
+    }
+
+    // ===================== ОТОБРАЖЕНИЕ ФОРУМА =====================
+    function renderForum() {
+      const container = document.getElementById('forumContainer');
+      
+      if (!subjects || subjects.length === 0) {
+        container.innerHTML = `<p style="color:#4b6a8a;">📭 Предметов пока нет. Добавьте первый!</p>`;
+        return;
+      }
+      
+      let html = '';
+      subjects.forEach(subj => {
+        const subjTopics = topics.filter(t => t.parent_id === null && t.subject_id === subj.id);
+        let topicHtml = subjTopics.map(t => renderTopicTree(t, subj.id)).join('');
+        html += `<div class="subject-card">
+          <div class="subj-title">📘 ${subj.name} <span style="font-size:0.7rem; font-weight:400; color:#4b6a8a;">${subj.creator || ''}</span></div>
+          <div class="subj-meta">${subj.description || ''} · ${subj.date || ''}</div>
+          <div class="topic-list">${topicHtml}</div>
+          <button class="add-topic-btn" data-subject="${subj.id}" data-parent="null">➕ Добавить тему</button>
+        </div>`;
+      });
+      container.innerHTML = html;
+      
+      document.querySelectorAll('.add-topic-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const subjectId = this.dataset.subject;
+          const parentId = this.dataset.parent === 'null' ? null : this.dataset.parent;
+          openTopicModal(subjectId, parentId);
+        });
+      });
+      
+      document.querySelectorAll('.add-subtopic-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const subjectId = this.dataset.subject;
+          const parentId = this.dataset.parent;
+          openTopicModal(subjectId, parentId);
+        });
+      });
+    }
+
+    function renderTopicTree(topic, subjectId) {
+      const children = topics.filter(t => t.parent_id === topic.id && t.subject_id === subjectId);
+      const childHtml = children.map(ch => renderTopicTree(ch, subjectId)).join('');
+      return `<div class="topic-item">
+        <div class="topic-header"><span>📌 ${topic.name}</span> <span style="font-weight:400; font-size:0.8rem;">${topic.creator || ''}</span></div>
+        <div class="topic-content">${topic.content || ''}</div>
+        <div class="topic-footer">${topic.date || ''} · <button class="add-subtopic-btn" style="background:none;border:none;color:#1e3a6b;cursor:pointer;font-weight:500;" data-subject="${subjectId}" data-parent="${topic.id}">➕ подтема</button></div>
+        ${childHtml ? `<div class="subtopic">${childHtml}</div>` : ''}
+      </div>`;
+    }
+
+    // ===================== МОДАЛЬНЫЕ ОКНА =====================
+    function openModal(title, fields) {
+      return new Promise((resolve) => {
+        document.getElementById('modalTitle').textContent = title;
+        document.getElementById('modalFields').innerHTML = fields.map(f => `
+          <label>${f.label}</label>
+          ${f.type === 'textarea' ? `<textarea name="${f.name}" placeholder="${f.placeholder || ''}">${f.value || ''}</textarea>` :
+          `<input type="${f.type || 'text'}" name="${f.name}" placeholder="${f.placeholder || ''}" value="${f.value || ''}">`}
+        `).join('');
+        document.getElementById('modalOverlay').classList.add('open');
+        
+        window.modalResolve = resolve;
+        
+        document.getElementById('modalSubmitBtn').onclick = (e) => {
+          e.preventDefault();
+          const formData = new FormData(document.getElementById('modalForm'));
+          const data = {};
+          for (let [key, val] of formData.entries()) data[key] = val;
+          document.getElementById('modalOverlay').classList.remove('open');
+          if (window.modalResolve) { 
+            window.modalResolve(data); 
+            window.modalResolve = null; 
+          }
+        };
+        
+        document.getElementById('modalCancelBtn').onclick = () => {
+          document.getElementById('modalOverlay').classList.remove('open');
+          if (window.modalResolve) { 
+            window.modalResolve(null); 
+            window.modalResolve = null; 
+          }
+        };
+        
+        document.getElementById('modalOverlay').onclick = (e) => {
+          if (e.target === document.getElementById('modalOverlay')) {
+            document.getElementById('modalOverlay').classList.remove('open');
+            if (window.modalResolve) { 
+              window.modalResolve(null); 
+              window.modalResolve = null; 
+            }
+          }
+        };
+      });
+    }
+
+    // ===================== ДОБАВЛЕНИЕ ПРЕДМЕТА =====================
+    async function openSubjectModal() {
+      const data = await openModal('➕ Новый предмет', [
+        { label: 'Название предмета', name: 'name', placeholder: 'Введите название' },
+        { label: 'Описание', name: 'description', placeholder: 'Краткое описание', type: 'textarea' },
+        { label: 'Создатель', name: 'creator', placeholder: 'Ваше имя' }
+      ]);
+      
+      if (!data) return;
+      
+      const debugBox = document.getElementById('debugBox');
+      debugBox.textContent = '⏳ Отправка предмета...';
+      
+      try {
+        await sendData('addSubject', { subject: data });
+        debugBox.textContent = '✅ Предмет отправлен, обновление данных...';
+        setTimeout(() => loadForumData(), 2000);
+      } catch (error) {
+        debugBox.textContent = `❌ Ошибка: ${error.message}`;
+        alert('Ошибка отправки предмета');
+      }
+    }
+
+    // ===================== ДОБАВЛЕНИЕ ТЕМЫ =====================
+    async function openTopicModal(subjectId, parentId = null) {
+      const data = await openModal('📝 Добавить тему', [
+        { label: 'Название темы', name: 'name', placeholder: 'Введите название' },
+        { label: 'Содержание', name: 'content', placeholder: 'Текст или описание', type: 'textarea' },
+        { label: 'Автор', name: 'creator', placeholder: 'Ваше имя' }
+      ]);
+      
+      if (!data) return;
+      
+      const debugBox = document.getElementById('debugBox');
+      debugBox.textContent = '⏳ Отправка темы...';
+      
+      try {
+        await sendData('addTopic', { 
+          topic: { 
+            ...data, 
+            subject_id: subjectId, 
+            parent_id: parentId 
+          } 
+        });
+        debugBox.textContent = '✅ Тема отправлена, обновление данных...';
+        setTimeout(() => loadForumData(), 2000);
+      } catch (error) {
+        debugBox.textContent = `❌ Ошибка: ${error.message}`;
+        alert('Ошибка отправки темы');
+      }
+    }
+
+    // ===================== ЗАГРУЗКА РАСПИСАНИЯ =====================
     async function loadSchedule() {
       const container = document.getElementById('scheduleContainer');
       container.innerHTML = '<div class="loading">Загрузка расписания</div>';
@@ -618,196 +769,54 @@
       container.innerHTML = html;
     }
 
-    // ===================== РАБОТА С API (Google Таблицы) =====================
-    async function loadForumData() {
-      const container = document.getElementById('forumContainer');
-      const debugBox = document.getElementById('debugBox');
-      
-      debugBox.textContent = '⏳ Загрузка данных...';
-      container.innerHTML = '<p style="color:#4b6a8a;">Загрузка...</p>';
-      
-      try {
-        const url = `${API_URL}?action=getData&_=${Date.now()}`;
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        
-        const data = await response.json();
-        debugBox.textContent = `📡 Ответ сервера: ${JSON.stringify(data, null, 2)}`;
-        
-        if (data.status === 'success') {
-          window.subjects = data.subjects || [];
-          window.topics = data.topics || [];
-          renderForum();
-        } else {
-          container.innerHTML = `<p style="color:#b33;">⚠️ Ошибка: ${data.message || 'Неизвестная ошибка'}</p>`;
-        }
-      } catch (error) {
-        debugBox.textContent = `❌ Ошибка запроса: ${error.message}`;
-        container.innerHTML = `<p style="color:#b33;">⚠️ Не удалось загрузить данные. Проверьте API_URL и настройки CORS.</p>
-          <p style="color:#666;font-size:0.9rem;">Убедитесь, что веб-приложение развернуто с доступом "Все, даже анонимные"</p>`;
+    // ===================== НАВИГАЦИЯ =====================
+    function getCurrentPage() {
+      const path = window.location.pathname;
+      if (path.includes('/raspisanie') || path.endsWith('/raspisanie')) {
+        return 'schedule';
+      } else if (path.includes('/predmety') || path.endsWith('/predmety')) {
+        return 'subjects';
       }
+      return 'schedule';
     }
 
-    // ===================== ОТОБРАЖЕНИЕ ФОРУМА =====================
-    function renderForum() {
-      const container = document.getElementById('forumContainer');
-      const subjects = window.subjects || [];
-      const topics = window.topics || [];
-      
-      if (!subjects || subjects.length === 0) {
-        container.innerHTML = `<p style="color:#4b6a8a;">📭 Предметов пока нет. Добавьте первый!</p>`;
-        return;
+    function navigateTo(page) {
+      let newPath = '';
+      if (page === 'schedule') {
+        newPath = '/volgmu24-07/raspisanie';
+      } else {
+        newPath = '/volgmu24-07/predmety';
       }
       
-      let html = '';
-      subjects.forEach(subj => {
-        const subjTopics = topics.filter(t => t.parent_id === null && t.subject_id === subj.id);
-        let topicHtml = subjTopics.map(t => renderTopicTree(t, subj.id, topics)).join('');
-        html += `<div class="subject-card">
-          <div class="subj-title">📘 ${subj.name} <span style="font-size:0.7rem; font-weight:400; color:#4b6a8a;">${subj.creator || ''}</span></div>
-          <div class="subj-meta">${subj.description || ''} · ${subj.date || ''}</div>
-          <div class="topic-list">${topicHtml}</div>
-          <button class="add-topic-btn" data-subject="${subj.id}" data-parent="null">➕ Добавить тему</button>
-        </div>`;
-      });
-      container.innerHTML = html;
+      if (window.location.pathname !== newPath) {
+        window.history.pushState({ page: page }, '', newPath);
+      }
       
-      // Обработчики для кнопок добавления
-      document.querySelectorAll('.add-topic-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-          const subjectId = this.dataset.subject;
-          const parentId = this.dataset.parent === 'null' ? null : this.dataset.parent;
-          openTopicModal(subjectId, parentId);
-        });
-      });
+      showPage(page);
+      updateActiveMenu(page);
+    }
+
+    function showPage(page) {
+      document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
       
-      document.querySelectorAll('.add-subtopic-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-          const subjectId = this.dataset.subject;
-          const parentId = this.dataset.parent;
-          openTopicModal(subjectId, parentId);
-        });
+      const pageId = page === 'schedule' ? 'pageSchedule' : 'pageSubjects';
+      document.getElementById(pageId).classList.add('active');
+      
+      if (page === 'schedule') {
+        loadSchedule();
+      } else if (page === 'subjects') {
+        loadForumData();
+      }
+      
+      closeMenu();
+    }
+
+    function updateActiveMenu(page) {
+      document.querySelectorAll('.menu-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.page === page);
       });
     }
 
-    function renderTopicTree(topic, subjectId, allTopics) {
-      const children = allTopics.filter(t => t.parent_id === topic.id && t.subject_id === subjectId);
-      const childHtml = children.map(ch => renderTopicTree(ch, subjectId, allTopics)).join('');
-      return `<div class="topic-item">
-        <div class="topic-header"><span>📌 ${topic.name}</span> <span style="font-weight:400; font-size:0.8rem;">${topic.creator || ''}</span></div>
-        <div class="topic-content">${topic.content || ''}</div>
-        <div class="topic-footer">${topic.date || ''} · <button class="add-subtopic-btn" style="background:none;border:none;color:#1e3a6b;cursor:pointer;font-weight:500;" data-subject="${subjectId}" data-parent="${topic.id}">➕ подтема</button></div>
-        ${childHtml ? `<div class="subtopic">${childHtml}</div>` : ''}
-      </div>`;
-    }
-
-    // ===================== МОДАЛЬНЫЕ ОКНА =====================
-    function openModal(title, fields) {
-      return new Promise((resolve) => {
-        document.getElementById('modalTitle').textContent = title;
-        document.getElementById('modalFields').innerHTML = fields.map(f => `
-          <label>${f.label}</label>
-          ${f.type === 'textarea' ? `<textarea name="${f.name}" placeholder="${f.placeholder || ''}">${f.value || ''}</textarea>` :
-          `<input type="${f.type || 'text'}" name="${f.name}" placeholder="${f.placeholder || ''}" value="${f.value || ''}">`}
-        `).join('');
-        document.getElementById('modalOverlay').classList.add('open');
-        
-        window.modalResolve = resolve;
-        
-        document.getElementById('modalSubmitBtn').onclick = (e) => {
-          e.preventDefault();
-          const formData = new FormData(document.getElementById('modalForm'));
-          const data = {};
-          for (let [key, val] of formData.entries()) data[key] = val;
-          document.getElementById('modalOverlay').classList.remove('open');
-          if (window.modalResolve) { window.modalResolve(data); window.modalResolve = null; }
-        };
-        
-        document.getElementById('modalCancelBtn').onclick = () => {
-          document.getElementById('modalOverlay').classList.remove('open');
-          if (window.modalResolve) { window.modalResolve(null); window.modalResolve = null; }
-        };
-        
-        document.getElementById('modalOverlay').onclick = (e) => {
-          if (e.target === document.getElementById('modalOverlay')) {
-            document.getElementById('modalOverlay').classList.remove('open');
-            if (window.modalResolve) { window.modalResolve(null); window.modalResolve = null; }
-          }
-        };
-      });
-    }
-
-    async function openSubjectModal() {
-      const data = await openModal('➕ Новый предмет', [
-        { label: 'Название предмета', name: 'name', placeholder: 'Введите название' },
-        { label: 'Описание', name: 'description', placeholder: 'Краткое описание', type: 'textarea' },
-        { label: 'Создатель', name: 'creator', placeholder: 'Ваше имя' }
-      ]);
-      if (!data) return;
-      
-      const debugBox = document.getElementById('debugBox');
-      debugBox.textContent = '⏳ Отправка предмета...';
-      
-      try {
-        const formData = new FormData();
-        formData.append('action', 'addSubject');
-        formData.append('payload', JSON.stringify({ subject: data }));
-        
-        const url = `${API_URL}?action=addSubject&_=${Date.now()}`;
-        await fetch(url, {
-          method: 'POST',
-          mode: 'no-cors',
-          body: formData
-        });
-        
-        debugBox.textContent = '✅ Предмет отправлен, обновление данных...';
-        setTimeout(() => loadForumData(), 2000);
-      } catch(e) {
-        debugBox.textContent = `❌ Ошибка: ${e.message}`;
-        alert('Ошибка соединения');
-      }
-    }
-
-    async function openTopicModal(subjectId, parentId = null) {
-      const data = await openModal('📝 Добавить тему', [
-        { label: 'Название темы', name: 'name', placeholder: 'Введите название' },
-        { label: 'Содержание', name: 'content', placeholder: 'Текст или описание', type: 'textarea' },
-        { label: 'Автор', name: 'creator', placeholder: 'Ваше имя' }
-      ]);
-      if (!data) return;
-      
-      const debugBox = document.getElementById('debugBox');
-      debugBox.textContent = '⏳ Отправка темы...';
-      
-      try {
-        const formData = new FormData();
-        formData.append('action', 'addTopic');
-        formData.append('payload', JSON.stringify({ 
-          topic: { ...data, subject_id: subjectId, parent_id: parentId }
-        }));
-        
-        const url = `${API_URL}?action=addTopic&_=${Date.now()}`;
-        await fetch(url, {
-          method: 'POST',
-          mode: 'no-cors',
-          body: formData
-        });
-        
-        debugBox.textContent = '✅ Тема отправлена, обновление данных...';
-        setTimeout(() => loadForumData(), 2000);
-      } catch(e) {
-        debugBox.textContent = `❌ Ошибка: ${e.message}`;
-        alert('Ошибка соединения');
-      }
-    }
-
-    // ===================== УПРАВЛЕНИЕ МЕНЮ =====================
     function toggleMenu(open) {
       document.getElementById('sideMenu').classList.toggle('open', open);
       document.getElementById('menuBackdrop').classList.toggle('open', open);
@@ -817,19 +826,18 @@
 
     // ===================== ИНИЦИАЛИЗАЦИЯ =====================
     function init() {
-      // Определяем текущую страницу по URL
-      const currentPage = getCurrentPage();
-      
-      // Показываем нужную страницу
-      showPage(currentPage);
-      updateActiveMenu(currentPage);
-      
+      // Обработчики навигации
+      window.addEventListener('popstate', function(event) {
+        const page = event.state?.page || getCurrentPage();
+        showPage(page);
+        updateActiveMenu(page);
+      });
+
       // Обработчики меню
       document.getElementById('hamburgerBtn').addEventListener('click', () => toggleMenu(true));
       document.getElementById('closeMenuBtn').addEventListener('click', closeMenu);
       document.getElementById('menuBackdrop').addEventListener('click', closeMenu);
       
-      // Обработчики пунктов меню
       document.querySelectorAll('.menu-item').forEach(item => {
         item.addEventListener('click', function(e) {
           e.preventDefault();
@@ -841,11 +849,11 @@
       // Кнопки
       document.getElementById('addSubjectBtn').addEventListener('click', openSubjectModal);
       document.getElementById('refreshForumBtn').addEventListener('click', loadForumData);
-      
-      // Если на странице предметов - загружаем
-      if (currentPage === 'subjects') {
-        loadForumData();
-      }
+
+      // Загрузка начальной страницы
+      const currentPage = getCurrentPage();
+      showPage(currentPage);
+      updateActiveMenu(currentPage);
     }
 
     // Запускаем после загрузки DOM
@@ -854,6 +862,7 @@
     } else {
       init();
     }
+
   })();
 </script>
 </body>
