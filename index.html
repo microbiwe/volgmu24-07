@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
   <title>сЛ24-07 учебный портал</title>
+  
+  <!-- Мета-теги для правильной работы с подссылками -->
+  <base href="/volgmu24-07/">
+  
   <style>
     /* ----- Общие стили & сброс ----- */
     * {
@@ -102,6 +106,7 @@
       border: none;
       width: 100%;
       text-align: left;
+      text-decoration: none;
     }
     .side-menu .menu-item:hover {
       background: #dce8fa;
@@ -188,6 +193,7 @@
       font-size: 0.9rem;
       color: #103256;
       border-left: 4px solid #1e3a6b;
+      white-space: pre-line;
     }
     .session-info strong { font-weight: 600; }
 
@@ -403,6 +409,24 @@
       z-index: 150;
     }
     .menu-backdrop.open { display: block; }
+
+    /* Индикатор загрузки */
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #4b6a8a;
+      font-size: 1.1rem;
+    }
+    .loading::after {
+      content: '...';
+      animation: dots 1.5s steps(4, end) infinite;
+    }
+    @keyframes dots {
+      0% { content: ''; }
+      25% { content: '.'; }
+      50% { content: '..'; }
+      75% { content: '...'; }
+    }
   </style>
 </head>
 <body>
@@ -418,8 +442,8 @@
 <div class="menu-backdrop" id="menuBackdrop"></div>
 <nav class="side-menu" id="sideMenu">
   <button class="close-btn" id="closeMenuBtn">✕</button>
-  <button class="menu-item active" data-page="schedule"><span>📅</span> Расписание</button>
-  <button class="menu-item" data-page="subjects"><span>📚</span> Предметы</button>
+  <a href="raspisanie" class="menu-item active" data-page="schedule"><span>📅</span> Расписание</a>
+  <a href="predmety" class="menu-item" data-page="subjects"><span>📚</span> Предметы</a>
 </nav>
 
 <!-- ОСНОВНАЯ ОБЛАСТЬ -->
@@ -428,7 +452,9 @@
   <!-- РАЗДЕЛ РАСПИСАНИЕ -->
   <section class="page-section active" id="pageSchedule">
     <h2 style="font-weight:400; margin-bottom:8px;">📅 Расписание занятий</h2>
-    <div class="schedule-grid" id="scheduleGrid"></div>
+    <div id="scheduleContainer">
+      <div class="loading">Загрузка расписания</div>
+    </div>
   </section>
 
   <!-- РАЗДЕЛ ПРЕДМЕТЫ (ФОРУМ) -->
@@ -464,143 +490,143 @@
   (function(){
     "use strict";
 
-    // ★★★ ЗАМЕНИТЕ ЭТУ ССЫЛКУ НА ВАШ Google Apps Script URL ★★★
+    // ===================== КОНФИГУРАЦИЯ =====================
+    // ★★★ Ссылка на JSON с расписанием в репозитории ★★★
+    const SCHEDULE_JSON_URL = 'https://raw.githubusercontent.com/microbiwe/volgmu24-07/main/schedule.json';
+    
+    // ★★★ Ссылка на Google Apps Script ★★★
     const API_URL = 'https://script.google.com/macros/s/AKfycbx2fBTgFobkk3jIUS35oZ1AORQDEYsigIRrjy-0hA_OIjI8mmh2tEudaICplPh1S6rI/exec';
 
-    // ===================== СОСТОЯНИЕ =====================
-    let subjects = [];
-    let topics = [];
-    let currentPage = 'schedule';
-    let modalResolve = null;
+    // ===================== РОУТИНГ (подссылки) =====================
+    function getCurrentPage() {
+      const path = window.location.pathname;
+      if (path.includes('/raspisanie') || path.endsWith('/raspisanie')) {
+        return 'schedule';
+      } else if (path.includes('/predmety') || path.endsWith('/predmety')) {
+        return 'subjects';
+      }
+      // По умолчанию - расписание
+      return 'schedule';
+    }
 
-    // DOM-элементы
-    const scheduleGrid = document.getElementById('scheduleGrid');
-    const forumContainer = document.getElementById('forumContainer');
-    const debugBox = document.getElementById('debugBox');
+    function navigateTo(page) {
+      // Обновляем URL без перезагрузки страницы
+      let newPath = '';
+      if (page === 'schedule') {
+        newPath = '/volgmu24-07/raspisanie';
+      } else {
+        newPath = '/volgmu24-07/predmety';
+      }
+      
+      // Используем history.pushState для изменения URL
+      if (window.location.pathname !== newPath) {
+        window.history.pushState({ page: page }, '', newPath);
+      }
+      
+      // Обновляем активную страницу
+      showPage(page);
+      updateActiveMenu(page);
+    }
 
-    const modalOverlay = document.getElementById('modalOverlay');
-    const modalWindow = document.getElementById('modalWindow');
-    const modalTitle = document.getElementById('modalTitle');
-    const modalFields = document.getElementById('modalFields');
-    const modalForm = document.getElementById('modalForm');
-    const modalCancelBtn = document.getElementById('modalCancelBtn');
-    const modalSubmitBtn = document.getElementById('modalSubmitBtn');
+    function showPage(page) {
+      // Скрываем все страницы
+      document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+      
+      // Показываем нужную
+      const pageId = page === 'schedule' ? 'pageSchedule' : 'pageSubjects';
+      document.getElementById(pageId).classList.add('active');
+      
+      // Загружаем данные если нужно
+      if (page === 'schedule') {
+        loadSchedule();
+      } else if (page === 'subjects') {
+        loadForumData();
+      }
+      
+      // Закрываем меню
+      closeMenu();
+    }
 
-    const sideMenu = document.getElementById('sideMenu');
-    const hamburgerBtn = document.getElementById('hamburgerBtn');
-    const closeMenuBtn = document.getElementById('closeMenuBtn');
-    const menuBackdrop = document.getElementById('menuBackdrop');
-    const menuItems = document.querySelectorAll('.menu-item');
-
-    // ===================== ИСПРАВЛЕННАЯ ФУНКЦИЯ API =====================
-    function apiFetch(action, payload = {}) {
-      return new Promise((resolve, reject) => {
-        const url = `${API_URL}?action=${action}&_=${Date.now()}`;
-        
-        // Создаем form-data для отправки (работает с no-cors)
-        const formData = new FormData();
-        formData.append('action', action);
-        formData.append('payload', JSON.stringify(payload));
-        
-        fetch(url, {
-          method: 'POST',
-          mode: 'no-cors',
-          body: formData
-        })
-        .then(response => {
-          // При no-cors response.status = 0, body недоступен
-          // Поэтому используем альтернативный подход - делаем запрос на получение данных отдельно
-          if (action === 'getData') {
-            // Для получения данных используем GET запрос с JSONP подходом
-            return fetchDataViaGet();
-          } else {
-            // Для записи просто ждем и потом делаем GET для обновления
-            // Имитируем успех, т.к. при no-cors мы не можем прочитать ответ
-            setTimeout(() => {
-              resolve({ status: 'success', message: 'Операция выполнена' });
-            }, 1500);
-          }
-        })
-        .catch(error => {
-          reject(error);
-        });
+    function updateActiveMenu(page) {
+      document.querySelectorAll('.menu-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.page === page);
       });
     }
 
-    // Альтернативный метод получения данных через GET
-    function fetchDataViaGet() {
-      return new Promise((resolve, reject) => {
-        const url = `${API_URL}?action=getData&_=${Date.now()}`;
-        
-        // Используем fetch без no-cors для GET запроса
-        fetch(url, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(data => {
-          resolve(data);
-        })
-        .catch(error => {
-          // Если GET не работает, пробуем через скрипт-тег (JSONP)
-          loadDataViaJsonp(resolve, reject);
-        });
-      });
-    }
+    // Обработка навигации (вперед/назад)
+    window.addEventListener('popstate', function(event) {
+      const page = event.state?.page || getCurrentPage();
+      showPage(page);
+      updateActiveMenu(page);
+    });
 
-    // JSONP метод для обхода CORS
-    function loadDataViaJsonp(resolve, reject) {
-      const callbackName = 'jsonpCallback_' + Date.now();
-      const script = document.createElement('script');
-      const url = `${API_URL}?action=getData&callback=${callbackName}&_=${Date.now()}`;
-      
-      window[callbackName] = function(data) {
-        delete window[callbackName];
-        document.body.removeChild(script);
-        resolve(data);
-      };
-      
-      script.src = url;
-      script.onerror = function() {
-        delete window[callbackName];
-        document.body.removeChild(script);
-        reject(new Error('JSONP запрос не удался'));
-      };
-      
-      document.body.appendChild(script);
-    }
-
-    // ===================== РАСПИСАНИЕ =====================
-    function renderSchedule() {
-      const days = [
-        { name: 'Понедельник', lessons: [['08:30', 'Анатомия (лекция)', 'ауд. 203'], ['10:15', 'Гистология', 'ауд. 115']] },
-        { name: 'Вторник', lessons: [['09:00', 'Физиология', 'ауд. 302'], ['11:00', 'Латынь', 'ауд. 401']] },
-        { name: 'Среда', lessons: [['08:30', 'Биохимия (лекция)', 'ауд. 101'], ['10:15', 'Микробиология', 'ауд. 210']] },
-        { name: 'Четверг', lessons: [['09:00', 'Патофизиология', 'ауд. 506'], ['11:00', 'Фармакология', 'ауд. 312']] },
-        { name: 'Пятница', lessons: [['08:30', 'Общая хирургия (лекция)', 'ауд. 601'], ['10:15', 'Топ. анатомия', 'ауд. 403']] },
-        { name: 'Суббота', lessons: [['09:00', 'Педиатрия', 'ауд. 207'], ['10:45', 'Психология', 'ауд. 109']] }
-      ];
-      scheduleGrid.innerHTML = days.map(d => {
-        const items = d.lessons.map(l => `<div class="lesson-item"><span class="time">${l[0]}</span><span class="name">${l[1]}</span><span class="aud">${l[2]}</span></div>`).join('');
-        return `<div class="day-card"><h3>📌 ${d.name}</h3>${items}
-          <div class="session-info"><strong>📋 Зачеты / экзамены:</strong> 10.06 – 20.06<br>📅 Сессия: 21.06 – 05.07<br>🌴 Каникулы: с 06.07</div></div>`;
-      }).join('');
-    }
-
-    // ===================== ЗАГРУЗКА ДАННЫХ =====================
-    async function loadForumData() {
-      debugBox.textContent = '⏳ Загрузка данных...';
-      forumContainer.innerHTML = '<p style="color:#4b6a8a;">Загрузка...</p>';
+    // ===================== ЗАГРУЗКА РАСПИСАНИЯ ИЗ JSON =====================
+    async function loadSchedule() {
+      const container = document.getElementById('scheduleContainer');
+      container.innerHTML = '<div class="loading">Загрузка расписания</div>';
       
       try {
-        // Пытаемся загрузить данные через GET
+        const response = await fetch(SCHEDULE_JSON_URL + '?_=' + Date.now());
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data && data.days) {
+          renderSchedule(data.days);
+        } else {
+          container.innerHTML = '<p style="color:#b33;">⚠️ Неверный формат JSON файла</p>';
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки расписания:', error);
+        container.innerHTML = `
+          <p style="color:#b33;">⚠️ Не удалось загрузить расписание</p>
+          <p style="color:#666;font-size:0.9rem;">Проверьте доступность файла: <a href="${SCHEDULE_JSON_URL}" target="_blank">${SCHEDULE_JSON_URL}</a></p>
+          <p style="color:#666;font-size:0.9rem;">Ошибка: ${error.message}</p>
+        `;
+      }
+    }
+
+    function renderSchedule(days) {
+      const container = document.getElementById('scheduleContainer');
+      
+      if (!days || days.length === 0) {
+        container.innerHTML = '<p style="color:#4b6a8a;">📭 Расписание не найдено</p>';
+        return;
+      }
+      
+      const html = `<div class="schedule-grid">${days.map(day => {
+        const items = day.lessons.map(l => 
+          `<div class="lesson-item">
+            <span class="time">${l[0]}</span>
+            <span class="name">${l[1]}</span>
+            <span class="aud">${l[2] || ''}</span>
+          </div>`
+        ).join('');
+        
+        const sessionInfo = day.sessionInfo ? 
+          `<div class="session-info">${day.sessionInfo.replace(/\n/g, '<br>')}</div>` : '';
+        
+        return `<div class="day-card">
+          <h3>📌 ${day.name}</h3>
+          ${items}
+          ${sessionInfo}
+        </div>`;
+      }).join('')}</div>`;
+      
+      container.innerHTML = html;
+    }
+
+    // ===================== РАБОТА С API (Google Таблицы) =====================
+    async function loadForumData() {
+      const container = document.getElementById('forumContainer');
+      const debugBox = document.getElementById('debugBox');
+      
+      debugBox.textContent = '⏳ Загрузка данных...';
+      container.innerHTML = '<p style="color:#4b6a8a;">Загрузка...</p>';
+      
+      try {
         const url = `${API_URL}?action=getData&_=${Date.now()}`;
         const response = await fetch(url, {
           method: 'GET',
@@ -615,30 +641,34 @@
         debugBox.textContent = `📡 Ответ сервера: ${JSON.stringify(data, null, 2)}`;
         
         if (data.status === 'success') {
-          subjects = data.subjects || [];
-          topics = data.topics || [];
+          window.subjects = data.subjects || [];
+          window.topics = data.topics || [];
           renderForum();
         } else {
-          forumContainer.innerHTML = `<p style="color:#b33;">⚠️ Ошибка: ${data.message || 'Неизвестная ошибка'}</p>`;
+          container.innerHTML = `<p style="color:#b33;">⚠️ Ошибка: ${data.message || 'Неизвестная ошибка'}</p>`;
         }
       } catch (error) {
         debugBox.textContent = `❌ Ошибка запроса: ${error.message}`;
-        forumContainer.innerHTML = `<p style="color:#b33;">⚠️ Не удалось загрузить данные. Проверьте API_URL и настройки CORS.</p>
+        container.innerHTML = `<p style="color:#b33;">⚠️ Не удалось загрузить данные. Проверьте API_URL и настройки CORS.</p>
           <p style="color:#666;font-size:0.9rem;">Убедитесь, что веб-приложение развернуто с доступом "Все, даже анонимные"</p>`;
       }
     }
 
     // ===================== ОТОБРАЖЕНИЕ ФОРУМА =====================
     function renderForum() {
+      const container = document.getElementById('forumContainer');
+      const subjects = window.subjects || [];
+      const topics = window.topics || [];
+      
       if (!subjects || subjects.length === 0) {
-        forumContainer.innerHTML = `<p style="color:#4b6a8a;">📭 Предметов пока нет. Добавьте первый!</p>`;
+        container.innerHTML = `<p style="color:#4b6a8a;">📭 Предметов пока нет. Добавьте первый!</p>`;
         return;
       }
       
       let html = '';
       subjects.forEach(subj => {
         const subjTopics = topics.filter(t => t.parent_id === null && t.subject_id === subj.id);
-        let topicHtml = subjTopics.map(t => renderTopicTree(t, subj.id)).join('');
+        let topicHtml = subjTopics.map(t => renderTopicTree(t, subj.id, topics)).join('');
         html += `<div class="subject-card">
           <div class="subj-title">📘 ${subj.name} <span style="font-size:0.7rem; font-weight:400; color:#4b6a8a;">${subj.creator || ''}</span></div>
           <div class="subj-meta">${subj.description || ''} · ${subj.date || ''}</div>
@@ -646,10 +676,11 @@
           <button class="add-topic-btn" data-subject="${subj.id}" data-parent="null">➕ Добавить тему</button>
         </div>`;
       });
-      forumContainer.innerHTML = html;
+      container.innerHTML = html;
       
+      // Обработчики для кнопок добавления
       document.querySelectorAll('.add-topic-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
+        btn.addEventListener('click', function() {
           const subjectId = this.dataset.subject;
           const parentId = this.dataset.parent === 'null' ? null : this.dataset.parent;
           openTopicModal(subjectId, parentId);
@@ -665,9 +696,9 @@
       });
     }
 
-    function renderTopicTree(topic, subjectId) {
-      const children = topics.filter(t => t.parent_id === topic.id && t.subject_id === subjectId);
-      const childHtml = children.map(ch => renderTopicTree(ch, subjectId)).join('');
+    function renderTopicTree(topic, subjectId, allTopics) {
+      const children = allTopics.filter(t => t.parent_id === topic.id && t.subject_id === subjectId);
+      const childHtml = children.map(ch => renderTopicTree(ch, subjectId, allTopics)).join('');
       return `<div class="topic-item">
         <div class="topic-header"><span>📌 ${topic.name}</span> <span style="font-weight:400; font-size:0.8rem;">${topic.creator || ''}</span></div>
         <div class="topic-content">${topic.content || ''}</div>
@@ -679,30 +710,34 @@
     // ===================== МОДАЛЬНЫЕ ОКНА =====================
     function openModal(title, fields) {
       return new Promise((resolve) => {
-        modalTitle.textContent = title;
-        modalFields.innerHTML = fields.map(f => `
+        document.getElementById('modalTitle').textContent = title;
+        document.getElementById('modalFields').innerHTML = fields.map(f => `
           <label>${f.label}</label>
           ${f.type === 'textarea' ? `<textarea name="${f.name}" placeholder="${f.placeholder || ''}">${f.value || ''}</textarea>` :
           `<input type="${f.type || 'text'}" name="${f.name}" placeholder="${f.placeholder || ''}" value="${f.value || ''}">`}
         `).join('');
-        modalOverlay.classList.add('open');
-        modalResolve = resolve;
-        modalSubmitBtn.onclick = (e) => {
+        document.getElementById('modalOverlay').classList.add('open');
+        
+        window.modalResolve = resolve;
+        
+        document.getElementById('modalSubmitBtn').onclick = (e) => {
           e.preventDefault();
-          const formData = new FormData(modalForm);
+          const formData = new FormData(document.getElementById('modalForm'));
           const data = {};
           for (let [key, val] of formData.entries()) data[key] = val;
-          modalOverlay.classList.remove('open');
-          if (modalResolve) { modalResolve(data); modalResolve = null; }
+          document.getElementById('modalOverlay').classList.remove('open');
+          if (window.modalResolve) { window.modalResolve(data); window.modalResolve = null; }
         };
-        modalCancelBtn.onclick = () => {
-          modalOverlay.classList.remove('open');
-          if (modalResolve) { modalResolve(null); modalResolve = null; }
+        
+        document.getElementById('modalCancelBtn').onclick = () => {
+          document.getElementById('modalOverlay').classList.remove('open');
+          if (window.modalResolve) { window.modalResolve(null); window.modalResolve = null; }
         };
-        modalOverlay.onclick = (e) => {
-          if (e.target === modalOverlay) {
-            modalOverlay.classList.remove('open');
-            if (modalResolve) { modalResolve(null); modalResolve = null; }
+        
+        document.getElementById('modalOverlay').onclick = (e) => {
+          if (e.target === document.getElementById('modalOverlay')) {
+            document.getElementById('modalOverlay').classList.remove('open');
+            if (window.modalResolve) { window.modalResolve(null); window.modalResolve = null; }
           }
         };
       });
@@ -716,7 +751,9 @@
       ]);
       if (!data) return;
       
+      const debugBox = document.getElementById('debugBox');
       debugBox.textContent = '⏳ Отправка предмета...';
+      
       try {
         const formData = new FormData();
         formData.append('action', 'addSubject');
@@ -745,7 +782,9 @@
       ]);
       if (!data) return;
       
+      const debugBox = document.getElementById('debugBox');
       debugBox.textContent = '⏳ Отправка темы...';
+      
       try {
         const formData = new FormData();
         formData.append('action', 'addTopic');
@@ -768,42 +807,53 @@
       }
     }
 
-    // ===================== НАВИГАЦИЯ =====================
-    function navigateTo(page) {
-      currentPage = page;
-      document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
-      document.getElementById(page === 'schedule' ? 'pageSchedule' : 'pageSubjects').classList.add('active');
-      menuItems.forEach(item => {
-        item.classList.toggle('active', item.dataset.page === page);
-      });
-      if (page === 'subjects') loadForumData();
-      closeMenu();
-    }
-
+    // ===================== УПРАВЛЕНИЕ МЕНЮ =====================
     function toggleMenu(open) {
-      sideMenu.classList.toggle('open', open);
-      menuBackdrop.classList.toggle('open', open);
+      document.getElementById('sideMenu').classList.toggle('open', open);
+      document.getElementById('menuBackdrop').classList.toggle('open', open);
     }
+    
     function closeMenu() { toggleMenu(false); }
 
     // ===================== ИНИЦИАЛИЗАЦИЯ =====================
     function init() {
-      renderSchedule();
-
-      hamburgerBtn.addEventListener('click', () => toggleMenu(true));
-      closeMenuBtn.addEventListener('click', closeMenu);
-      menuBackdrop.addEventListener('click', closeMenu);
-      menuItems.forEach(item => {
-        item.addEventListener('click', () => navigateTo(item.dataset.page));
+      // Определяем текущую страницу по URL
+      const currentPage = getCurrentPage();
+      
+      // Показываем нужную страницу
+      showPage(currentPage);
+      updateActiveMenu(currentPage);
+      
+      // Обработчики меню
+      document.getElementById('hamburgerBtn').addEventListener('click', () => toggleMenu(true));
+      document.getElementById('closeMenuBtn').addEventListener('click', closeMenu);
+      document.getElementById('menuBackdrop').addEventListener('click', closeMenu);
+      
+      // Обработчики пунктов меню
+      document.querySelectorAll('.menu-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          const page = this.dataset.page;
+          navigateTo(page);
+        });
       });
-
+      
+      // Кнопки
       document.getElementById('addSubjectBtn').addEventListener('click', openSubjectModal);
       document.getElementById('refreshForumBtn').addEventListener('click', loadForumData);
-
-      loadForumData();
+      
+      // Если на странице предметов - загружаем
+      if (currentPage === 'subjects') {
+        loadForumData();
+      }
     }
 
-    init();
+    // Запускаем после загрузки DOM
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
   })();
 </script>
 </body>
